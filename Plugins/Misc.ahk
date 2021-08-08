@@ -152,7 +152,7 @@ return
 SearchOnGoogle:
     word := UrlEncode(Arg == "" ? clipboard : Arg)
 
-    Run, https://www.google.com.hk/#newwindow=1&safe=strict&q=%word%
+    Run, https://www.google.com/search?q=%word%
 return
 
 SearchOnBing:
