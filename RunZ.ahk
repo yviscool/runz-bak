@@ -240,6 +240,7 @@ Hotkey, F2, EditConfig
 Hotkey, F3, EditAutoConfig
 Hotkey, ^q, RestartRunZ
 Hotkey, ^l, ClearInput
+Hotkey, ^u, ClearInput
 Hotkey, ^d, OpenCurrentFileDir
 Hotkey, ^x, DeleteCurrentFile
 Hotkey, ^s, ShowCurrentFile
