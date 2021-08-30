@@ -7,6 +7,8 @@ Misc:
     @("SearchOnGoogle", "使用 谷歌 搜索剪切板或输入内容")
     @("SearchOnBaidu", "使用 百度 搜索剪切板或输入内容")
     @("SearchOnZhihu", "使用 知乎 搜索剪切板或输入内容")
+    @("SearchOnNpm", "使用 npm 搜索剪切板或输入内容")
+    @("SearchOnGithub", "使用 github 搜索剪切板或输入内容")
     @("SearchOnBing", "使用 必应 搜索剪切板或输入内容")
     @("SearchOnTaobao", "使用 淘宝 搜索剪切板或输入内容")
     @("SearchOnJD", "使用 京东 搜索剪切板或输入内容")
@@ -147,6 +149,18 @@ SearchOnZhihu:
     word := Arg == "" ? clipboard : Arg
 
     Run, https://www.zhihu.com/search?type=content&q=%word%
+return
+
+SearchOnNpm:
+    word := Arg == "" ? clipboard : Arg
+
+    Run, https://www.npmjs.com/search?q=%word%
+return
+
+SearchOnGithub:
+    word := Arg == "" ? clipboard : Arg
+
+    Run, https://github.com/search?q=%word%
 return
 
 SearchOnGoogle:
