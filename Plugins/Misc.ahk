@@ -72,12 +72,13 @@ return
 Dictionary:
     word := Arg == "" ? clipboard : Arg
 
-
-    BaiduFanyiAPI(BaiduFanyiAPPID, BaiduFanyiAPPSEC, keyword, from:="auto", to:="zh") {
+    BaiduFanyiAPI(keyword, from:="auto", to:="zh") {
+        appId := "*****" ; 请替换为您的APP ID
+        key := "******" ; 请替换为您的密钥
         salt := A_Now
-        MD5Sign := MD5(BaiduFanyiAPPID keyword salt BaiduFanyiAPPSEC)
+        MD5Sign := MD5(appId keyword salt key)
         ; keyword := UrlEncode(keyword)
-        URL := Format("https://fanyi-api.baidu.com/api/trans/vip/translate?q={1}&from={2}&to={3}&appid={4}&salt={5}&sign={6}", keyword, from, to, BaiduFanyiAPPID, salt, MD5Sign)
+        URL := Format("https://fanyi-api.baidu.com/api/trans/vip/translate?q={1}&from={2}&to={3}&appid={4}&salt={5}&sign={6}", keyword, from, to, appId, salt, MD5Sign)
         WebRequest := ComObjCreate("WinHttp.WinHttpRequest.5.1")
         WebRequest.Open("GET", url)
         WebRequest.Send()
@@ -92,10 +93,9 @@ Dictionary:
         return RegExMatch(text, pattern)
     }
 
-
     YouDaoFanyiAPi() {
         url := "http://fanyi.youdao.com/openapi.do?keyfrom=YouDaoCV&key=659600698&"
-            . "type=data&doctype=json&version=1.2&q=" UrlEncode(word)
+        . "type=data&doctype=json&version=1.2&q=" UrlEncode(word)
 
         jsonText := StrReplace(UrlDownloadToString(url), "-phonetic", "_phonetic")
 
@@ -126,7 +126,7 @@ Dictionary:
             result .= "`n"
             for index, explain in parsed.basic.explains
             {
-                result .= "    * " explain "`n"
+                result .= " * " explain "`n"
             }
         }
 
@@ -136,12 +136,12 @@ Dictionary:
 
             for i, element in parsed.web
             {
-                result .= "`n    * " element.key
+                result .= "`n * " element.key
                 for j, value in element.value
                 {
                     if (j == 1)
                     {
-                        result .= "`n       "
+                        result .= "`n "
                     }
                     else
                     {
@@ -155,18 +155,105 @@ Dictionary:
         return result
     }
 
+    EncodeDecodeURI(str, encode := true, component := true) {
+        static Doc, JS
+        if !Doc {
+            Doc := ComObjCreate("htmlfile")
+            Doc.write("<meta http-equiv=""X-UA-Compatible"" content=""IE=9"">")
+            JS := Doc.parentWindow
+            ( Doc.documentMode < 9 && JS.execScript() )
+        }
+        Return JS[ (encode ? "en" : "de") . "codeURI" . (component ? "Component" : "") ](str)
+    }
 
-    sourceText := word
-    fromLanguage := "auto"
-    toLanguage := isEnglish(sourceText) ? "zh" : "en"
-    appId := "********" ; 请替换为您的APP ID
-    key := ""********"" ; 请替换为您的密钥
+    BingExtract(html) {
+        keywordsRegex := "<meta name=""keywords"" content=""(.*?)"" />"
+        descriptionRegex := "i)<meta name=""description"" (content=""(.*?)"") />"
+        keywordsMatch := RegExMatch(html, keywordsRegex, keywords)
+        descriptionMatch := RegExMatch(html, descriptionRegex, description)
 
-    result := BaiduFanyiAPI(appId, key, sourceText, fromLanguage, toLanguage)
+        result := ""
 
+        if descriptionMatch {
+            ; MsgBox % "Description: " . description
+            if RegExMatch(description, "i)，(.*?)""", description){
+                clipboard := description
+                ; MsgBox % SubStr(a, 2, -1)
+                data := StrSplit(SubStr(description, 2, -1), "，")
+                if data.Length() == 2 {
+                    result .= data[1] . "`n`n" . data[2]
+                } else {
+                    result .= data[1] . " " . data[2] . "`n`n" . data[3]
+                }
+            }
+        } else {
+            result = "not found"
+        }
+        return result
+    }
+
+    BingFanyi(word){
+        url := "https://cn.bing.com/dict/search?q=" . EncodeDecodeURI(word)
+
+        httpRequest := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        httpRequest.Open("GET", url)
+        httpRequest.Send()
+
+        responseBody := httpRequest.ResponseText
+
+        ; return BingExtract(SubStr(responseBody, 1, 2000))
+
+        html := ComObjCreate("HTMLFile")
+        html.write(responseBody)
+
+        div := html.getElementsByTagName("div")
+
+        ;翻译
+        result .= div[14].innerText
+        return result
+    }
+
+    YouDaoFanyi(word){
+        url := "https://www.youdao.com/result?lang=en&word=" . EncodeDecodeURI(word)
+        httpRequest := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        httpRequest.Open("GET", url)
+        httpRequest.Send()
+
+        HtmlText := httpRequest.ResponseText
+
+        html := ComObjCreate("HTMLFile")
+        html.write(SubStr(HtmlText, 30000))
+
+        ul := html.getElementsByTagName("ul")
+        span := html.getElementsByTagName("span")
+
+        result := ""
+        ;音标
+        result .= span[17].innerText . " " . span[18].innerText . " " . span[19].innerText . " " . span[20].innerText  . "`n"
+        ;翻译
+        result .= ul[5].innerText . "`n"
+        ;语法
+        ; result .= html.getElementsByTagName("ul")[6].innerText . " "
+        ; network
+        result .= ul[8].innerText . "`n"
+        ; phrase
+        result .= ul[9].innerText . "`n"
+        result .= ul[11].innerText . "`n"
+        result .= ul[13].innerText . "`n"
+        return result
+    }
+
+    ; sourceText := word
+    ; fromLanguage := "auto"
+    ; toLanguage := isEnglish(sourceText) ? "zh" : "en"
+    ; result := BaiduFanyiAPI(sourceText, fromLanguage, toLanguage)
+
+    ; result := YouDaoFanyi(word)
+    result := BingFanyi(word)
     DisplayResult(result)
-    clipboard := result
+    ; clipboard := result
 return
+
 
 Calendar:
     Run % "http://www.baidu.com/baidu?wd=%CD%F2%C4%EA%C0%FA"
