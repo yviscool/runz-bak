@@ -72,64 +72,97 @@ return
 Dictionary:
     word := Arg == "" ? clipboard : Arg
 
-    url := "http://fanyi.youdao.com/openapi.do?keyfrom=YouDaoCV&key=659600698&"
+
+    BaiduFanyiAPI(BaiduFanyiAPPID, BaiduFanyiAPPSEC, keyword, from:="auto", to:="zh") {
+        salt := A_Now
+        MD5Sign := MD5(BaiduFanyiAPPID keyword salt BaiduFanyiAPPSEC)
+        ; keyword := UrlEncode(keyword)
+        URL := Format("https://fanyi-api.baidu.com/api/trans/vip/translate?q={1}&from={2}&to={3}&appid={4}&salt={5}&sign={6}", keyword, from, to, BaiduFanyiAPPID, salt, MD5Sign)
+        WebRequest := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+        WebRequest.Open("GET", url)
+        WebRequest.Send()
+        result := WebRequest.ResponseText
+        result := JSON.load(result)
+        return result["trans_result"][1]["dst"]
+    }
+
+    isEnglish(text) {
+        ; Regular expression pattern for English characters (A-Z, a-z)
+        pattern := "^[A-Za-z]+$"
+        return RegExMatch(text, pattern)
+    }
+
+
+    YouDaoFanyiAPi() {
+        url := "http://fanyi.youdao.com/openapi.do?keyfrom=YouDaoCV&key=659600698&"
             . "type=data&doctype=json&version=1.2&q=" UrlEncode(word)
 
-    jsonText := StrReplace(UrlDownloadToString(url), "-phonetic", "_phonetic")
+        jsonText := StrReplace(UrlDownloadToString(url), "-phonetic", "_phonetic")
 
-    if (jsonText == "no query")
-    {
-        DisplayResult("未查到结果")
-        return
-    }
-
-    parsed := JSON.Load(jsonText)
-    result := parsed.query
-
-    if (parsed.basic.uk_phonetic != "" && parsed.basic.us_phonetic != "")
-    {
-        result .= " UK: [" parsed.basic.uk_phonetic "], US: [" parsed.basic.us_phonetic "]`n"
-    }
-    else if (parsed.basic.phonetic != "")
-    {
-        result .= " [" parsed.basic.phonetic "]`n"
-    }
-    else
-    {
-        result .= "`n"
-    }
-
-    if (parsed.basic.explains.Length() > 0)
-    {
-        result .= "`n"
-        for index, explain in parsed.basic.explains
+        if (jsonText == "no query")
         {
-            result .= "    * " explain "`n"
+            DisplayResult("未查到结果")
+            return
         }
-    }
 
-    if (parsed.web.Length() > 0)
-    {
-        result .= "`n----`n"
+        parsed := JSON.Load(jsonText)
+        result := parsed.query
 
-        for i, element in parsed.web
+        if (parsed.basic.uk_phonetic != "" && parsed.basic.us_phonetic != "")
         {
-            result .= "`n    * " element.key
-            for j, value in element.value
-            {
-                if (j == 1)
-                {
-                    result .= "`n       "
-                }
-                else
-                {
-                    result .= "`; "
-                }
+            result .= " UK: [" parsed.basic.uk_phonetic "], US: [" parsed.basic.us_phonetic "]`n"
+        }
+        else if (parsed.basic.phonetic != "")
+        {
+            result .= " [" parsed.basic.phonetic "]`n"
+        }
+        else
+        {
+            result .= "`n"
+        }
 
-                result .= value
+        if (parsed.basic.explains.Length() > 0)
+        {
+            result .= "`n"
+            for index, explain in parsed.basic.explains
+            {
+                result .= "    * " explain "`n"
             }
         }
+
+        if (parsed.web.Length() > 0)
+        {
+            result .= "`n----`n"
+
+            for i, element in parsed.web
+            {
+                result .= "`n    * " element.key
+                for j, value in element.value
+                {
+                    if (j == 1)
+                    {
+                        result .= "`n       "
+                    }
+                    else
+                    {
+                        result .= "`; "
+                    }
+
+                    result .= value
+                }
+            }
+        }
+        return result
     }
+
+
+    sourceText := word
+    fromLanguage := "auto"
+    toLanguage := isEnglish(sourceText) ? "zh" : "en"
+    appId := "********" ; 请替换为您的APP ID
+    key := ""********"" ; 请替换为您的密钥
+
+    result := BaiduFanyiAPI(appId, key, sourceText, fromLanguage, toLanguage)
 
     DisplayResult(result)
     clipboard := result
