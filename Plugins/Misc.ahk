@@ -210,7 +210,7 @@ Dictionary:
 
         ;翻译
         result .= div[14].innerText
-        return result
+        return SubStr(result, StrLen(word)+3)
     }
 
     YouDaoFanyi(word){
